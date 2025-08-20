@@ -83,7 +83,7 @@ const ListComponent = () => {
   const fetchTasks = useCallback(async () => {
     try {
       const res = await axios.get<TaskType[]>(
-        `${process.env.NEXT_PUBLIC_BE}/api/all`
+        `${process.env.NEXT_PUBLIC_BE}/all`
       );
       setTasks(res.data.sort((a, b) => a.posizione - b.posizione));
     } catch (err) {
@@ -125,7 +125,7 @@ const ListComponent = () => {
     setTasks(updatedTasks);
 
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_BE}/api/task/reorder`, {
+      await axios.post(`${process.env.NEXT_PUBLIC_BE}/task/reorder`, {
         tasks: updatedTasks.map((t) => ({
           id: t.id,
           posizione: t.posizione,

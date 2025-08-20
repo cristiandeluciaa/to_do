@@ -79,7 +79,7 @@ const Task = ({
 
     if (task.id) {
       axios
-        .post(`${process.env.NEXT_PUBLIC_BE}/api/task/edit`, {
+        .post(`${process.env.NEXT_PUBLIC_BE}/task/edit`, {
           ...formData,
           completata: updatedValue,
         })
@@ -90,7 +90,7 @@ const Task = ({
 
   const handleSave = async () => {
     try {
-      const url = `${process.env.NEXT_PUBLIC_BE}/api/task/${
+      const url = `${process.env.NEXT_PUBLIC_BE}/task/${
         formData.id ? "edit" : "add"
       }`;
       await axios.post(url, formData);
@@ -104,7 +104,7 @@ const Task = ({
   const handleDelete = async () => {
     try {
       if (!formData.id) return;
-      await axios.delete(`${process.env.NEXT_PUBLIC_BE}/api/task/del`, {
+      await axios.delete(`${process.env.NEXT_PUBLIC_BE}/task/del`, {
         data: { id: formData.id },
       });
       onDelete();
