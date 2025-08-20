@@ -2,14 +2,11 @@
 
 return [
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*'],  // Abilita CORS solo per API
 
-    'allowed_methods' => ['*'],
+    'allowed_methods' => ['*'],  // Tutti i metodi: GET, POST, ecc.
 
-    'allowed_origins' => [
-        'http://80.211.208.57:82',
-        'http://localhost:3003',
-    ],
+    'allowed_origins' => ['*'],  // O il tuo dominio frontend, es: 'http://80.211.208.57'
 
     'allowed_origins_patterns' => [],
 
@@ -19,6 +16,5 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true,
-
+    'supports_credentials' => false,  // true se usi cookie/session
 ];
