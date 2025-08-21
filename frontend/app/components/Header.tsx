@@ -7,8 +7,6 @@ const Header = () => {
                 <div className="text-2xl font-bold pr-[7.5%]"><span>TODO</span></div>
                 <nav className="flex justify-start items-center h-full w-full">
                     <ButtonNav nome={"Home"} pagina={"Home"} />
-                    <ButtonNav nome={"Lista"} pagina={"Lista"} />
-                    <ButtonNav nome={"Calendario"} pagina={"Calendario"} />
                 </nav>
             </div>
         </div>

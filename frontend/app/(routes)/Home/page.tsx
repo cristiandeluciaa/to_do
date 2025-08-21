@@ -1,6 +1,6 @@
 import Card from "@/app/components/Card";
 import ListComponent from "@/app/components/List";
-import Calendar from "../Calendar/page";
+import Calendar from "../Calendario/page";
 
 const Home = () => {
     return(

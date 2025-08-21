@@ -2,7 +2,7 @@ import ListComponent from "@/app/components/List"
 
 const List = () => {
     return(
-        <ListComponent />
+        <ListComponent gg={null} />
     )
 }
 
