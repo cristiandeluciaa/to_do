@@ -279,7 +279,7 @@ const ListComponent = ({
           items={tasks.map((task) => task.id ?? `temp-${Math.random()}`)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="space-y-2 overflow-auto w-full">
+          <div className="space-y-2 overflow-auto scrollbar-hide w-full">
             {tasks.map((task) => (
               <SortableTask
                 key={task.id}

@@ -160,7 +160,7 @@ const Task = ({
       </div>
 
       {/* Posizione */}
-      <div className="w-[7.5%] mr-2">
+      <div className="w-[7.5%] mx-2">
         <input
           type="number"
           name="posizione"
