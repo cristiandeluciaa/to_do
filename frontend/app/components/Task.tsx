@@ -10,7 +10,8 @@ export type TaskType = {
   id?: number;
   titolo: string;
   descrizione: string;
-  posizione: number | string;
+  posizione: number | string | null;
+  scadenze: string | null; 
   completata: number;
   priority?: string;
 };
@@ -74,6 +75,7 @@ const Task = ({
 
     setFormData((prev) => ({
       ...prev,
+      posizione: "",
       completata: updatedValue,
     }));
 
@@ -81,6 +83,7 @@ const Task = ({
       axios
         .post(`${process.env.NEXT_PUBLIC_BE}/task/edit`, {
           ...formData,
+          posizione: "",
           completata: updatedValue,
         })
         .then(() => onSave())

@@ -9,13 +9,25 @@ use App\Services\Priorita;
 
 class ToDoController
 {
-    public function all()
+    // 🔹 Recupera tutti i task, eventualmente filtrando per scadenze
+    public function all(Request $request)
     {
-        $allTasks = ToDo::orderBy("priorita")->orderBy("posizione")->get();
+        $scadenze = $request->input('scadenze', null); // singular
+
+        $query = ToDo::query();
+
+        if ($scadenze) {
+            $query->whereDate('scadenze', $scadenze);
+        }
+
+        $allTasks = $query->orderByRaw("completata = 'S', priorita, posizione")
+                          ->orderByDesc('updated_at')
+                          ->get();
 
         return response()->json($allTasks);
     }
 
+    // 🔹 Aggiungi nuovo task
     public function add(Request $request)
     {
         $data = $request->validate([
@@ -29,18 +41,17 @@ class ToDoController
 
         $data["titolo"] = strtoupper($data["titolo"] ?? "");
         $data["priorita"] = $data["priorita"] ?? Priorita::getValues(Priorita::DISPONIBILE);
+        $data["scadenze"] = $data["scadenze"] ?? null;
 
         DB::transaction(function () use (&$task, $data) {
-            // se è stata passata una posizione → shift
+            // Shift posizioni se necessario
             if (!empty($data["posizione"])) {
                 ToDo::where("priorita", $data["priorita"])
                     ->where("posizione", ">=", $data["posizione"])
                     ->increment("posizione");
-            }else{
-                // altrimenti, trova l'ultima posizione disponibile
+            } else {
                 $lastPosition = ToDo::where("priorita", $data["priorita"])
                     ->max("posizione");
-
                 $data["posizione"] = $lastPosition !== null ? $lastPosition + 1 : 0;
             }
 
@@ -54,6 +65,7 @@ class ToDoController
         ]);
     }
 
+    // 🔹 Modifica task
     public function edit(Request $request)
     {
         $data = $request->validate([
@@ -70,28 +82,37 @@ class ToDoController
 
         $data["titolo"] = strtoupper($data["titolo"] ?? "");
         $data["priorita"] = $data["priorita"] ?? $task->priorita;
+        $data["scadenze"] = $data["scadenze"] ?? $task->scadenze;
         $newPos = $data["posizione"] ?? $task->posizione;
 
         DB::transaction(function () use (&$task, $data, $newPos) {
-            if ($newPos !== null && $task->posizione !== null && $newPos != $task->posizione) {
-                if ($newPos < $task->posizione) {
-                    // spostato in alto → quelli tra newPos e oldPos scalano avanti
+            // Spostamento posizioni solo se non completato
+            if ($task->completata !== "S" && ($data["completata"] ?? $task->completata) !== "S") {
+                if ($newPos !== null && $task->posizione !== null && $newPos != $task->posizione) {
+                    if ($newPos < $task->posizione) {
+                        ToDo::where("priorita", $data["priorita"])
+                            ->where("posizione", ">=", $newPos)
+                            ->where("posizione", "<", $task->posizione)
+                            ->increment("posizione");
+                    } else {
+                        ToDo::where("priorita", $data["priorita"])
+                            ->where("posizione", "<=", $newPos)
+                            ->where("posizione", ">", $task->posizione)
+                            ->decrement("posizione");
+                    }
+                } elseif ($newPos !== null && $task->posizione === null) {
                     ToDo::where("priorita", $data["priorita"])
                         ->where("posizione", ">=", $newPos)
-                        ->where("posizione", "<", $task->posizione)
                         ->increment("posizione");
-                } else {
-                    // spostato in basso → quelli tra oldPos e newPos scalano indietro
-                    ToDo::where("priorita", $data["priorita"])
-                        ->where("posizione", "<=", $newPos)
-                        ->where("posizione", ">", $task->posizione)
-                        ->decrement("posizione");
                 }
-            } elseif ($newPos !== null && $task->posizione === null) {
-                // se prima non aveva posizione e ora sì → fai posto
-                ToDo::where("priorita", $data["priorita"])
-                    ->where("posizione", ">=", $newPos)
-                    ->increment("posizione");
+            }
+
+            // Se completato → metti in fondo
+            if (($data["completata"] ?? $task->completata) === "S") {
+                $lastPos = ToDo::where("priorita", $task->priorita)
+                    ->where("completata", "N")
+                    ->max("posizione");
+                $data["posizione"] = $lastPos !== null ? $lastPos + 1 : 0;
             }
 
             $task->update($data);
@@ -104,19 +125,18 @@ class ToDoController
         ]);
     }
 
+    // 🔹 Cancella task
     public function del(Request $request)
     {
         $id = $request->input("id");
         $task = ToDo::findOrFail($id);
 
         DB::transaction(function () use ($task) {
-            // se aveva posizione, scala indietro quelli dopo
             if ($task->posizione !== null) {
                 ToDo::where("priorita", $task->priorita)
                     ->where("posizione", ">", $task->posizione)
                     ->decrement("posizione");
             }
-
             $task->delete();
         });
 
@@ -126,7 +146,7 @@ class ToDoController
         ]);
     }
 
-     // Riordina i task
+    // 🔹 Riordina i task
     public function reorder(Request $request)
     {
         $tasks = $request->input('tasks');

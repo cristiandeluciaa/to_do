@@ -11,18 +11,21 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import Task from "./Task";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { useDate } from "@/app/context/DateContext"; // context per la data
 
 // 🔹 Tipo riutilizzabile per i task
 export type TaskType = {
   id?: number;
   titolo: string;
   descrizione: string;
-  posizione: number;
+  posizione: number | string | null;
   completata: number;
+  scadenze: string | null;
   priorita: string;
+  updated_at: string;
 };
 
-// 🔹 Props di SortableTask
 type SortableTaskProps = {
   task: TaskType;
   priority: string | number;
@@ -30,7 +33,6 @@ type SortableTaskProps = {
   onDelete?: () => void;
 };
 
-// Task trascinabile
 function SortableTask({ task, priority, onSave, onDelete }: SortableTaskProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: task.id ?? "" });
@@ -47,22 +49,52 @@ function SortableTask({ task, priority, onSave, onDelete }: SortableTaskProps) {
         priority={priority}
         onSave={onSave}
         onDelete={onDelete}
-        dragHandleProps={{ ...attributes, ...listeners }} // 👉 passo la linguetta
+        dragHandleProps={{ ...attributes, ...listeners }}
       />
     </div>
   );
 }
 
-const ListComponent = () => {
+const ListComponent = ({
+  gg = null,
+  freccieEnabled = false,
+}: {
+  gg: string | null;
+  freccieEnabled?: boolean;
+}) => {
   const [tasks, setTasks] = useState<TaskType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [creating, setCreating] = useState<boolean>(false);
+
+  const { shiftDate } = useDate(); // context per cambiare giorno centrale
 
   const newButtonRef = useRef<HTMLButtonElement | null>(null);
   const saveButtonRef = useRef<HTMLButtonElement | null>(null);
   const titoloRef = useRef<HTMLInputElement | null>(null);
 
-  // Shortcut da tastiera
+  // 🔹 Funzione ordinamento
+  const sortTasks = (arr: TaskType[]) => {
+    const nonCompleted = arr
+      .filter((t) => t.completata === 0)
+      .sort((a, b) =>
+        a.priorita === b.priorita
+          ? Number(a.posizione ?? 0) - Number(b.posizione ?? 0)
+          : a.priorita.localeCompare(b.priorita)
+      )
+      .map((t, idx) => ({ ...t, posizione: idx }));
+
+    const completed = arr
+      .filter((t) => t.completata === 1)
+      .map((t) => ({ ...t, posizione: null }))
+      .sort(
+        (a, b) =>
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+
+    return [...nonCompleted, ...completed];
+  };
+
+  // 🔹 Shortcut tastiera
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "l") {
@@ -74,30 +106,42 @@ const ListComponent = () => {
         e.preventDefault();
         saveButtonRef.current?.click();
       }
+
+      // 🔹 Nuove shortcut per frecce
+      if (freccieEnabled) {
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          shiftDate(-1);
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault();
+          shiftDate(1);
+        }
+      }
     };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [freccieEnabled, shiftDate]);
 
-  // Fetch task dal backend
+  // 🔹 Fetch
   const fetchTasks = useCallback(async () => {
     try {
       const res = await axios.get<TaskType[]>(
-        `${process.env.NEXT_PUBLIC_BE}/all`
+        `${process.env.NEXT_PUBLIC_BE}/all`,
+        { params: { scadenze: gg } }
       );
-      setTasks(res.data.sort((a, b) => a.posizione - b.posizione));
+      setTasks(sortTasks(res.data));
     } catch (err) {
       console.error("Errore nel fetch dei task:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [gg]);
 
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
 
-  // Salvataggio e refresh
   const handleSave = () => {
     setCreating(false);
     fetchTasks();
@@ -107,29 +151,40 @@ const ListComponent = () => {
     fetchTasks();
   };
 
-  // Gestione drag&drop
+  // 🔹 Drag&drop → solo tra i non completati
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = tasks.findIndex((t) => t.id === active.id);
-    const newIndex = tasks.findIndex((t) => t.id === over.id);
-    const newOrder = arrayMove(tasks, oldIndex, newIndex);
+    const activeTask = tasks.find((t) => t.id === active.id);
+    const overTask = tasks.find((t) => t.id === over.id);
 
-    // 🔹 aggiorniamo anche il campo posizione localmente
-    const updatedTasks: TaskType[] = newOrder.map((t, index) => ({
-      ...t,
-      posizione: index,
-    }));
+    if (
+      !activeTask ||
+      !overTask ||
+      activeTask.completata ||
+      overTask.completata
+    )
+      return;
 
-    setTasks(updatedTasks);
+    const nonCompleted = tasks.filter((t) => t.completata === 0);
+    const oldIndex = nonCompleted.findIndex((t) => t.id === active.id);
+    const newIndex = nonCompleted.findIndex((t) => t.id === over.id);
+
+    const moved = arrayMove(nonCompleted, oldIndex, newIndex);
+
+    const updated: TaskType[] = [
+      ...moved.map((t, idx) => ({ ...t, posizione: idx })),
+      ...tasks
+        .filter((t) => t.completata === 1)
+        .map((t) => ({ ...t, posizione: null })),
+    ];
+
+    setTasks(updated);
 
     try {
       await axios.post(`${process.env.NEXT_PUBLIC_BE}/task/reorder`, {
-        tasks: updatedTasks.map((t) => ({
-          id: t.id,
-          posizione: t.posizione,
-        })),
+        tasks: moved.map((t, idx) => ({ id: t.id, posizione: idx })),
       });
     } catch (err) {
       console.error("Errore nel salvataggio del nuovo ordine:", err);
@@ -144,8 +199,53 @@ const ListComponent = () => {
     );
   }
 
+  // 🔹 Controllo se oggi
+  const today = new Date();
+  const todaySQL = today.toISOString().split("T")[0];
+  const isToday = gg === todaySQL;
+
   return (
     <div className="flex flex-col items-center w-full h-full p-[2%]">
+      {gg ? (
+        <div
+          className={`flex uppercase items-center mb-[2%] text-[2vh] p-[1%] w-full font-bold ${
+            freccieEnabled ? "shadow-md justify-between" : "justify-center"
+          }`}
+        >
+          {freccieEnabled && (
+            <button
+              className="mr-2 hover:scale-110 transition cursor-pointer"
+              onClick={() => shiftDate(-1)}
+            >
+              <FaChevronLeft />
+            </button>
+          )}
+          <span>
+            {new Intl.DateTimeFormat("it-IT", { weekday: "long" }).format(
+              new Date(gg)
+            )}
+            {" - "}
+            {new Date(gg).getDate()}{" "}
+            {new Intl.DateTimeFormat("it-IT", { month: "long" }).format(
+              new Date(gg)
+            )}{" "}
+            {new Date(gg).getFullYear()}
+          </span>
+          {freccieEnabled && (
+            <button
+              className="ml-2 hover:scale-110 transition cursor-pointer"
+              onClick={() => shiftDate(1)}
+            >
+              <FaChevronRight />
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="flex justify-center items-center mb-[2%] p-[1%] w-full text-[2vh] font-bold">
+          TASK GENERICI
+        </div>
+      )}
+
       {/* Pulsante Nuovo */}
       <button
         ref={newButtonRef}
@@ -163,6 +263,7 @@ const ListComponent = () => {
             descrizione: "",
             posizione: 0,
             completata: 0,
+            scadenze: gg,
             id: undefined,
           }}
           priority={process.env.NEXT_PUBLIC_AVAILABLE || ""}
@@ -174,8 +275,11 @@ const ListComponent = () => {
       )}
 
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={tasks.map(task => task.id ?? `temp-${Math.random()}`)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2 w-full">
+        <SortableContext
+          items={tasks.map((task) => task.id ?? `temp-${Math.random()}`)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2 overflow-auto w-full">
             {tasks.map((task) => (
               <SortableTask
                 key={task.id}
