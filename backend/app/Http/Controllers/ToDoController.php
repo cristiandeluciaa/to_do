@@ -12,12 +12,14 @@ class ToDoController
     // 🔹 Recupera tutti i task, eventualmente filtrando per scadenze
     public function all(Request $request)
     {
-        $scadenze = $request->input('scadenze', null); // singular
+        $scadenze = $request->input('scadenze', null); 
 
         $query = ToDo::query();
 
         if ($scadenze) {
             $query->whereDate('scadenze', $scadenze);
+        }else{
+            $query->whereNull('scadenze');
         }
 
         $allTasks = $query->orderByRaw("completata = 'S', priorita, posizione")
