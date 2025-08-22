@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, RefObject } from "react";
 import AutoResizeTextarea from "./AutoResizeTextarea";
 import { IoIosSave } from "react-icons/io";
 import { LuCircleMinus } from "react-icons/lu";
+import { HiMiniArrowTurnDownRight } from "react-icons/hi2";
 import { LiaGripLinesSolid } from "react-icons/lia";
 import axios from "axios";
 
@@ -11,7 +12,7 @@ export type TaskType = {
   titolo: string;
   descrizione: string;
   posizione: number | string | null;
-  scadenze: string | null; 
+  scadenze: string | null;
   completata: number;
   priority?: string;
 };
@@ -24,7 +25,7 @@ type TaskProps = {
   onDelete?: () => void;
   titoloRef?: RefObject<HTMLInputElement | null>;
   saveButtonRef?: RefObject<HTMLButtonElement | null>;
-  dragHandleProps?: any;  // meglio di any ✅
+  dragHandleProps?: any; // meglio di any ✅
 };
 
 const Task = ({
@@ -116,6 +117,38 @@ const Task = ({
     }
   };
 
+  const handleCopy = async () => {
+    try {
+      const newScadenza = formData.scadenze
+        ? new Date(formData.scadenze)
+        : null;
+      if (newScadenza) {
+        newScadenza.setDate(newScadenza.getDate() + 1);
+      }
+
+      // formatter sicuro (evita problemi di timezone)
+      const toSQL = (d: Date) =>
+        [
+          d.getFullYear(),
+          String(d.getMonth() + 1).padStart(2, "0"),
+          String(d.getDate()).padStart(2, "0"),
+        ].join("-");
+
+      await axios.post(`${process.env.NEXT_PUBLIC_BE}/task/add`, {
+        ...formData,
+        id: undefined, // così non duplichi l'ID
+        scadenze: newScadenza ? toSQL(newScadenza) : null,
+      });
+
+      // 🔹 non serve fare shiftDate
+      // 🔹 non serve aggiungere subito alla lista odierna (perché il task è di domani)
+      // richiama solo onSave() per aggiornare eventuali stati locali
+      window.location.reload()
+    } catch (err) {
+      console.error("Errore nel salvataggio task:", err);
+    }
+  };
+
   return (
     <div
       className={`${getClassByPriority(
@@ -172,7 +205,7 @@ const Task = ({
       </div>
 
       {/* Titolo + descrizione */}
-      <div className="w-[75%]">
+      <div className="w-[57.5%]">
         <h2
           className={`text-[1.6vh] font-bold ${
             formData.completata ? "line-through text-gray-400" : ""
@@ -200,12 +233,15 @@ const Task = ({
       </div>
 
       {/* Azioni */}
-      <div className="w-[12.5%] flex items-center justify-end">
+      <div className="w-[27.5%] flex items-center justify-end">
         {isEditing && (
           <button ref={saveButtonRef} onClick={handleSave}>
-            <IoIosSave className="text-white text-[2.75vh] mr-4 cursor-pointer hover:text-[#bdd1e7]" />
+            <IoIosSave className="text-white text-[2.75vh] mr-2 cursor-pointer hover:text-[#bdd1e7]" />
           </button>
         )}
+        <button onClick={handleCopy}>
+          <HiMiniArrowTurnDownRight className="text-white text-[2.75vh] mr-2 cursor-pointer hover:text-[#bdd1e7]" />
+        </button>
         <button onClick={handleDelete}>
           <LuCircleMinus className="text-white text-[2.75vh] cursor-pointer hover:text-red-500" />
         </button>
