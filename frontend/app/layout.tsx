@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from "./components/Header";
@@ -25,16 +26,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-     <html lang="en">
+    <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-hidden  w-screen h-screen `}
       >
-        <div className="h-[6vh] shadow-b-2xl">
-          <Header />
-        </div>
-        <div className="h-[94vh] text-white bg-[#2b445f] flex justify-center items-center">
-        <DateProvider>{children}</DateProvider>
-      </div>
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-hidden w-screen h-screen`}
+        >
+          <DateProvider>
+            <div className="h-[6vh] shadow-b-2xl">
+              <Header />
+            </div>
+            <div className="h-[94vh] text-white bg-[#2b445f] flex justify-center items-center">
+              {children}
+            </div>
+          </DateProvider>
+        </body>
       </body>
     </html>
   );

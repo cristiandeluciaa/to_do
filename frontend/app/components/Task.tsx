@@ -6,7 +6,6 @@ import { HiMiniArrowTurnDownRight } from "react-icons/hi2";
 import { LiaGripLinesSolid } from "react-icons/lia";
 import axios from "axios";
 
-// 🔹 Tipo singolo task
 export type TaskType = {
   id?: number;
   titolo: string;
@@ -17,7 +16,6 @@ export type TaskType = {
   priority?: string;
 };
 
-// 🔹 Props del componente
 type TaskProps = {
   task: TaskType;
   priority: string | number;
@@ -117,37 +115,45 @@ const Task = ({
     }
   };
 
-  const handleCopy = async () => {
-    try {
-      const newScadenza = formData.scadenze
-        ? new Date(formData.scadenze)
-        : null;
-      if (newScadenza) {
-        newScadenza.setDate(newScadenza.getDate() + 1);
-      }
+ const handleCopy = async () => {
+  try {
+    let repeat = prompt(
+      "Quante volte vuoi ripetere questo task? Inserisci un numero (1 = solo il giorno successivo)",
+      "1"
+    );
 
-      // formatter sicuro (evita problemi di timezone)
-      const toSQL = (d: Date) =>
-        [
-          d.getFullYear(),
-          String(d.getMonth() + 1).padStart(2, "0"),
-          String(d.getDate()).padStart(2, "0"),
-        ].join("-");
+    if (!repeat) return; // annullato
+    const times = parseInt(repeat);
+    if (isNaN(times) || times < 1) return alert("Inserisci un numero valido!");
+
+    const baseDate = formData.scadenze
+      ? new Date(formData.scadenze)
+      : new Date();
+
+    // formatter sicuro (evita problemi di timezone)
+    const toSQL = (d: Date) =>
+      [
+        d.getFullYear(),
+        String(d.getMonth() + 1).padStart(2, "0"),
+        String(d.getDate()).padStart(2, "0"),
+      ].join("-");
+
+    for (let i = 1; i <= times; i++) {
+      const newDate = new Date(baseDate);
+      newDate.setDate(baseDate.getDate() + i);
 
       await axios.post(`${process.env.NEXT_PUBLIC_BE}/task/add`, {
         ...formData,
         id: undefined, // così non duplichi l'ID
-        scadenze: newScadenza ? toSQL(newScadenza) : null,
+        scadenze: toSQL(newDate),
       });
-
-      // 🔹 non serve fare shiftDate
-      // 🔹 non serve aggiungere subito alla lista odierna (perché il task è di domani)
-      // richiama solo onSave() per aggiornare eventuali stati locali
-      window.location.reload()
-    } catch (err) {
-      console.error("Errore nel salvataggio task:", err);
     }
-  };
+
+    window.location.reload();
+  } catch (err) {
+    console.error("Errore nel salvataggio task:", err);
+  }
+};
 
   return (
     <div

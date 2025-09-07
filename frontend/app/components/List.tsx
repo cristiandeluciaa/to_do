@@ -14,7 +14,7 @@ import Task from "./Task";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { useDate } from "@/app/context/DateContext"; // context per la data
 
-// 🔹 Tipo riutilizzabile per i task
+// Tipo riutilizzabile per i task
 export type TaskType = {
   id?: number;
   titolo: string;
@@ -72,7 +72,7 @@ const ListComponent = ({
   const saveButtonRef = useRef<HTMLButtonElement | null>(null);
   const titoloRef = useRef<HTMLInputElement | null>(null);
 
-  // 🔹 Funzione ordinamento
+  // Funzione ordinamento
   const sortTasks = (arr: TaskType[]) => {
     const nonCompleted = arr
       .filter((t) => t.completata === 0)
@@ -94,27 +94,35 @@ const ListComponent = ({
     return [...nonCompleted, ...completed];
   };
 
-  // 🔹 Shortcut tastiera
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "l") {
-        e.preventDefault();
-        newButtonRef.current?.click();
-        setTimeout(() => titoloRef.current?.focus(), 50);
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-        e.preventDefault();
-        saveButtonRef.current?.click();
-      }
+      const target = e.target as HTMLElement;
+      const isInput =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        (target as HTMLElement).isContentEditable;
 
-      // 🔹 Nuove shortcut per frecce
-      if (freccieEnabled) {
-        if (e.key === "ArrowLeft") {
+      // Shortcut globali solo se non stiamo scrivendo
+      if (!isInput) {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "l") {
           e.preventDefault();
-          shiftDate(-1);
-        } else if (e.key === "ArrowRight") {
+          newButtonRef.current?.click();
+          setTimeout(() => titoloRef.current?.focus(), 50);
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
           e.preventDefault();
-          shiftDate(1);
+          saveButtonRef.current?.click();
+        }
+
+        // Frecce solo se abilitate e non stiamo scrivendo
+        if (freccieEnabled) {
+          if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            shiftDate(-1);
+          } else if (e.key === "ArrowRight") {
+            e.preventDefault();
+            shiftDate(1);
+          }
         }
       }
     };
@@ -123,7 +131,7 @@ const ListComponent = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [freccieEnabled, shiftDate]);
 
-  // 🔹 Fetch
+  // Fetch
   const fetchTasks = useCallback(async () => {
     try {
       const res = await axios.get<TaskType[]>(
@@ -151,7 +159,7 @@ const ListComponent = ({
     fetchTasks();
   };
 
-  // 🔹 Drag&drop → solo tra i non completati
+  // Drag&drop → solo tra i non completati
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -199,7 +207,7 @@ const ListComponent = ({
     );
   }
 
-  // 🔹 Controllo se oggi
+  // Controllo se oggi
   const today = new Date();
   const todaySQL = today.toISOString().split("T")[0];
   const isToday = gg === todaySQL;
@@ -276,7 +284,7 @@ const ListComponent = ({
 
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext
-          items={tasks.map((task) => task.id ?? `temp-${Math.random()}`)}
+          items={tasks.map((task, idx) => task.id ?? `temp-${idx}`)}
           strategy={verticalListSortingStrategy}
         >
           <div className="space-y-2 overflow-auto scrollbar-hide w-full">
