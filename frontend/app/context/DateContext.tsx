@@ -10,21 +10,35 @@ type DateContextType = {
 
 const DateContext = createContext<DateContextType | undefined>(undefined);
 
+const formatLocalDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const parseLocalDate = (dateString: string): Date => {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
+
 export const DateProvider = ({ children }: { children: ReactNode }) => {
-  const initialDate = Cookies.get("lastDate") || new Date().toISOString().split("T")[0];
+  const initialDate = Cookies.get("lastDate") || formatLocalDate(new Date());
   const [centralDate, setCentralDate] = useState<string>(initialDate);
 
   const shiftDate = (offset: number) => {
-    const d = new Date(centralDate);
+    const d = parseLocalDate(centralDate);
     d.setDate(d.getDate() + offset);
-    setCentralDate(d.toISOString().split("T")[0]);
-    Cookies.set("lastDate", d.toISOString().split("T")[0]);
+
+    const newDate = formatLocalDate(d);
+    setCentralDate(newDate);
+    Cookies.set("lastDate", newDate);
   };
 
   const returnToday = () => {
-    const now = new Date();
-    setCentralDate(now.toISOString().split("T")[0]);
-    Cookies.set("lastDate", now.toISOString().split("T")[0]);
+    const today = formatLocalDate(new Date());
+    setCentralDate(today);
+    Cookies.set("lastDate", today);
   };
 
   return (
