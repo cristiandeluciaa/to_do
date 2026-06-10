@@ -1,7 +1,5 @@
-
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Header from "./components/Header";
 import { DateProvider } from "./context/DateContext";
 import "./globals.css";
 
@@ -28,20 +26,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-hidden  w-screen h-screen `}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-hidden w-screen h-screen`}
       >
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-hidden w-screen h-screen`}
-        >
-          <DateProvider>
-            <div className="h-[6vh] shadow-b-2xl">
-              <Header />
-            </div>
-            <div className="h-[94vh] text-white bg-[#2b445f] flex justify-center items-center">
-              {children}
-            </div>
-          </DateProvider>
-        </body>
+        <DateProvider>
+          {children}
+        </DateProvider>
       </body>
     </html>
   );
