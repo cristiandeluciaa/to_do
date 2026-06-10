@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import * as OTPLib from "otplib";
-const authenticator = OTPLib.authenticator;
+import speakeasy from "speakeasy";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -18,12 +17,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "MFA non configurato" }, { status: 400 });
   }
 
-  const isValid = authenticator.verify({ token: code, secret: user.totpSecret });
+  const isValid = speakeasy.totp.verify({
+    secret: user.totpSecret,
+    encoding: "base32",
+    token: code,
+    window: 1,
+  });
+
   if (!isValid) {
     return NextResponse.json({ error: "Codice non valido" }, { status: 400 });
   }
 
-  // Se primo accesso, abilita il TOTP
   if (!user.totpEnabled) {
     await prisma.user.update({
       where: { id: user.id },
@@ -31,7 +35,6 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Imposta cookie mfa_verified (30 giorni)
   const response = NextResponse.json({ status: "ok" });
   response.cookies.set("mfa_verified", "true", {
     httpOnly: true,
