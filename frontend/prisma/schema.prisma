@@ -1,0 +1,23 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model ToDo {
+  id          Int       @id @default(autoincrement())
+  titolo      String?
+  descrizione String?
+  priorita    String?
+  scadenze    String?
+  completata  Int?      @default(0)
+  posizione   Int?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  @@map("to_do")
+}
