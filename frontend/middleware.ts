@@ -1,35 +1,23 @@
-import { auth } from "@/auth";
+import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/api/auth"];
+const { auth } = NextAuth(authConfig);
 
-export default auth((req) => {
+export default auth((req: NextRequest & { auth: any }) => {
   const { pathname } = req.nextUrl;
 
-  // Lascia passare i path pubblici
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  const publicPaths = ["/login", "/api/auth", "/setup-mfa", "/verify-mfa", "/api/mfa"];
+  if (publicPaths.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
-  // Non autenticato → login
   if (!req.auth) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
   const mfaVerified = req.cookies.get("mfa_verified")?.value === "true";
-  const userId = req.auth.user?.id;
-
-  // Lascia passare le pagine MFA
-  if (pathname.startsWith("/setup-mfa") || pathname.startsWith("/verify-mfa")) {
-    return NextResponse.next();
-  }
-
-  // Lascia passare le API MFA
-  if (pathname.startsWith("/api/mfa")) {
-    return NextResponse.next();
-  }
-
-  // MFA non verificato → redirect
   if (!mfaVerified) {
     return NextResponse.redirect(new URL("/verify-mfa", req.url));
   }

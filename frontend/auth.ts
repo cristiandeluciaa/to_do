@@ -2,8 +2,10 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
+import { authConfig } from "./auth.config";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
   providers: [
     Google({
@@ -14,9 +16,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
     strategy: "database",
     maxAge: 30 * 24 * 60 * 60, // 30 giorni
-  },
-  pages: {
-    signIn: "/login",
   },
   callbacks: {
     async session({ session, user }) {
