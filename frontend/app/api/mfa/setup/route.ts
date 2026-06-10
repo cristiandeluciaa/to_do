@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { authenticator } from "otplib";
+import * as OTPLib from "otplib";
+const authenticator = OTPLib.authenticator;
 import qrcode from "qrcode";
 
 export async function GET() {
